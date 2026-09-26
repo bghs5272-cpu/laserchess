@@ -124,8 +124,8 @@
         <canvas id="gameCanvas"></canvas>
 
         <div class="w-full max-w-[800px] text-center mt-4 text-sm text-gray-400 px-4">
-            * 말을 선택하고 <b>[이동]</b> 또는 <b>[방향 전환]</b>을 선택하세요.<br>
-            * 취소하고 싶다면 언제든 <b>[돌아가기]</b>를 누르거나 빈칸을 터치하세요!
+            * 말을 클릭하여 <b>[이동]</b> 또는 <b>[회전]</b>을 선택하세요.<br>
+            * 이전 단계로 가고 싶다면 말 위의 <b>[돌아가기]</b>를 누르세요.
         </div>
     </div>
 
@@ -176,21 +176,21 @@
                             <line x1="15" y1="85" x2="85" y2="15" stroke="white" stroke-width="12" stroke-dasharray="15, 10"/>
                         </svg>
                     </div>
-                    <div><b>스플리터:</b> 레이저를 투과 및 반사시킵니다. 거울 면이 추가되어 직관적입니다.</div>
+                    <div><b>스플리터:</b> 레이저를 투과 및 반사시켜 공격합니다.</div>
                 </div>
 
                 <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><polygon points="10,90 90,90 10,10" fill="#ffffff"/><line x1="10" y1="10" x2="90" y2="90" stroke="#aaddff" stroke-width="12"/></svg>
                     </div>
-                    <div><b>세모기사:</b> 거울로 레이저를 반사시킵니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
+                    <div><b>세모기사:</b> 평면거울을 사용해 레이저를 45˚의 반사각으로 반사합니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
                 </div>
 
                 <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><rect x="10" y="10" width="80" height="80" fill="#ffffff"/><line x1="10" y1="10" x2="90" y2="10" stroke="#aaddff" stroke-width="16"/></svg>
                     </div>
-                    <div><b>네모기사:</b> 거울로 레이저를 반사시킵니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
+                    <div><b>네모기사:</b> 평면거울을 사용해 레이저를 0˚의 반사각으로 반사합니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
                 </div>
             </div>
 
@@ -245,7 +245,7 @@
 
         let selectedPiece = null;
         let validMoves = [];
-        let activeButtons = []; // 현재 렌더링된 UI 버튼 배열
+        let activeButtons = []; 
 
         let laserBeams = [];
         let maxAnimTime = 0;
@@ -432,7 +432,6 @@
                 document.getElementById('intro-modal').classList.remove('hidden');
                 document.getElementById('timer-display').innerText = "60";
                 
-                // 보드를 비우지 않고 다시 초기화하여 검은 화면 방지
                 initBoard();
                 drawAll();
             } else {
@@ -475,25 +474,24 @@
             }
         }
 
+        function canRotate(r, c, type, dir) {
+            if (type !== TYPES.LASER) return true;
+            let p = board[r][c];
+            let newRot = (p.rot + dir + 4) % 4;
+            if (newRot === 0 && r === 0) return false; 
+            if (newRot === 1 && c === SIZE - 1) return false; 
+            if (newRot === 2 && r === SIZE - 1) return false; 
+            if (newRot === 3 && c === 0) return false; 
+            return true;
+        }
+
         function doRotate(dir) {
             if (!selectedPiece || gameState !== 'PLAYING') return;
             
             let p = board[selectedPiece.r][selectedPiece.c];
             if (!p) return;
 
-            let newRot = (p.rot + dir + 4) % 4;
-
-            if (p.type === TYPES.LASER) {
-                // 바깥으로 향하게 되는 회전은 무시합니다. (턴 소모 방지)
-                if ((newRot === 0 && selectedPiece.r === 0) || 
-                    (newRot === 1 && selectedPiece.c === SIZE - 1) || 
-                    (newRot === 2 && selectedPiece.r === SIZE - 1) || 
-                    (newRot === 3 && selectedPiece.c === 0)) { 
-                    return; 
-                }
-            }
-
-            p.rot = newRot; 
+            p.rot = (p.rot + dir + 4) % 4; 
             playSound('move');
             endTurnAction();
         }
@@ -520,7 +518,6 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            // 1. UI 버튼 클릭 우선 확인
             for (let i = activeButtons.length - 1; i >= 0; i--) {
                 let btn = activeButtons[i];
                 if (x >= btn.left && x <= btn.right && y >= btn.top && y <= btn.bottom) {
@@ -529,13 +526,11 @@
                 }
             }
 
-            // 2. 보드 영역 클릭 처리
             const c = Math.floor(x / cellSize);
             const r = Math.floor(y / cellSize);
 
             if (c < 0 || c >= SIZE || r < 0 || r >= SIZE) return;
 
-            // 이동 상태일 때 유효한 칸 클릭 처리
             if (uiState === 'MOVE' && selectedPiece) {
                 if (validMoves.some(m => m.r === r && m.c === c)) {
                     board[r][c] = board[selectedPiece.r][selectedPiece.c];
@@ -546,14 +541,12 @@
                 }
             }
 
-            // 새로운 기물 선택 처리
             let p = board[r][c];
             if (p && p.owner === currentTurn) {
                 selectedPiece = { r, c };
                 uiState = 'ACTION_MENU';
                 calcValidMoves(r, c, p);
             } else {
-                // 내 기물이 아니거나 빈칸이면 선택 해제
                 selectedPiece = null;
                 uiState = 'NONE';
                 validMoves = [];
@@ -584,7 +577,6 @@
             fireLaser(currentTurn);
         }
 
-        // --- 레이저 발사 및 애니메이션 로직 유지 (이전과 동일) ---
         function fireLaser(owner) {
             playSound('laser'); 
             laserBeams = [];
@@ -861,10 +853,8 @@
                 for(let c=0; c<SIZE; c++) {
                     let p = board[r][c];
                     if (p && p.owner === P2) {
-                        if (p.type !== TYPES.LASER || (p.type === TYPES.LASER && p.rot !== 2)) { 
-                            moves.push({type:'rot', r, c, nrot: (p.rot+1)%4});
-                            moves.push({type:'rot', r, c, nrot: (p.rot+3)%4});
-                        }
+                        if (canRotate(r, c, p.type, 1)) moves.push({type:'rot', r, c, nrot: (p.rot+1)%4});
+                        if (canRotate(r, c, p.type, -1)) moves.push({type:'rot', r, c, nrot: (p.rot+3)%4});
                         
                         if (p.type !== TYPES.LASER) {
                             const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
@@ -896,7 +886,6 @@
             endTurnAction();
         }
 
-        // --- UI 버튼 그리기 헬퍼 ---
         function roundRect(ctx, x, y, w, h, r) {
             ctx.beginPath();
             ctx.moveTo(x + r, y);
@@ -911,8 +900,13 @@
             ctx.closePath();
         }
 
-        function drawButton(ctx, x, y, w, h, text, color, action, data = null) {
+        function drawButton(ctx, x, y, w, h, text, color, action, data = null, isBlack = false) {
             ctx.save();
+            if (isBlack) {
+                ctx.translate(x, y);
+                ctx.rotate(Math.PI);
+                ctx.translate(-x, -y);
+            }
             ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
@@ -921,7 +915,7 @@
             ctx.stroke();
 
             ctx.fillStyle = (color === '#ff4757') ? '#ff4757' : '#fff';
-            let fontSize = (text === '↺' || text === '↻') ? h * 0.6 : h * 0.4;
+            let fontSize = h * 0.4;
             ctx.font = `bold ${fontSize}px 'Noto Sans KR', sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -931,11 +925,82 @@
             activeButtons.push({ left: x - w/2, right: x + w/2, top: y - h/2, bottom: y + h/2, action, data });
         }
 
+        function drawRotationArc(ctx, r, c, dir, themeColor) {
+            let cx = c * cellSize + cellSize / 2;
+            let cy = r * cellSize + cellSize / 2;
+            let targetCell = null;
+            let startAngle, endAngle, isCCW_arc;
+
+            if (dir === 1) { 
+                if (c < SIZE - 1) { 
+                    targetCell = {r, c: c+1};
+                    startAngle = -Math.PI/4; endAngle = Math.PI/4; isCCW_arc = false;
+                } else { 
+                    if (r === 0) { 
+                        targetCell = {r: r+1, c};
+                        startAngle = Math.PI/4; endAngle = 3*Math.PI/4; isCCW_arc = false;
+                    } else { 
+                        targetCell = {r: r-1, c};
+                        startAngle = 5*Math.PI/4; endAngle = 7*Math.PI/4; isCCW_arc = false;
+                    }
+                }
+            } else { 
+                if (c > 0) { 
+                    targetCell = {r, c: c-1};
+                    startAngle = 5*Math.PI/4; endAngle = 3*Math.PI/4; isCCW_arc = true;
+                } else { 
+                    if (r === 0) { 
+                        targetCell = {r: r+1, c};
+                        startAngle = 3*Math.PI/4; endAngle = Math.PI/4; isCCW_arc = true;
+                    } else { 
+                        targetCell = {r: r-1, c};
+                        startAngle = 7*Math.PI/4; endAngle = 5*Math.PI/4; isCCW_arc = true;
+                    }
+                }
+            }
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+            ctx.fillRect(targetCell.c * cellSize, targetCell.r * cellSize, cellSize, cellSize);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, cellSize * 0.7, startAngle, endAngle, isCCW_arc);
+            ctx.strokeStyle = themeColor;
+            ctx.lineWidth = cellSize * 0.08;
+            ctx.lineCap = 'round';
+            ctx.shadowColor = themeColor;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+
+            let headX = cx + Math.cos(endAngle) * cellSize * 0.7;
+            let headY = cy + Math.sin(endAngle) * cellSize * 0.7;
+            let tangent = endAngle + (isCCW_arc ? -Math.PI/2 : Math.PI/2);
+            
+            ctx.translate(headX, headY);
+            ctx.rotate(tangent);
+            ctx.beginPath();
+            ctx.moveTo(cellSize * 0.15, 0); 
+            ctx.lineTo(-cellSize * 0.15, cellSize * 0.12);
+            ctx.lineTo(-cellSize * 0.15, -cellSize * 0.12);
+            ctx.closePath();
+            ctx.fillStyle = themeColor;
+            ctx.fill();
+            ctx.restore();
+
+            activeButtons.push({
+                left: targetCell.c * cellSize,
+                right: targetCell.c * cellSize + cellSize,
+                top: targetCell.r * cellSize,
+                bottom: targetCell.r * cellSize + cellSize,
+                action: 'DO_ROTATE',
+                data: {dir}
+            });
+        }
+
         function getUIPosition(r, c, owner) {
             let cx = c * cellSize + cellSize / 2;
             let cy = r * cellSize + cellSize / 2;
             
-            // 흑백 대칭 및 가장자리 제어 (화면 밖으로 나가지 않도록 오프셋 적용)
             let offsetY = -cellSize * 0.9; 
             if (owner === P2) offsetY = cellSize * 0.9; 
             
@@ -943,7 +1008,6 @@
             if (cy + offsetY > canvas.height - cellSize/2) offsetY = -cellSize * 0.9;
 
             let bx = cx;
-            // A열, H열 화면 가림 방지
             if (bx < cellSize * 1.2) bx = cellSize * 1.2;
             if (bx > canvas.width - cellSize * 1.2) bx = canvas.width - cellSize * 1.2;
 
@@ -951,13 +1015,12 @@
         }
 
         function drawAll() {
-            activeButtons = []; // 매 프레임 UI 버튼 초기화
+            activeButtons = []; 
             if (gameState === 'MENU' || board.length === 0) return;
 
             ctx.fillStyle = '#050505'; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 1. 체스판 배경 및 타일 하이라이트 그리기
             for (let r = 0; r < SIZE; r++) {
                 for (let c = 0; c < SIZE; c++) {
                     let x = c * cellSize;
@@ -977,7 +1040,6 @@
                         ctx.fill();
                     }
 
-                    // 기물 렌더링
                     let p = board[r][c];
                     if (p && pieceImages[p.owner][p.type]) {
                         ctx.save();
@@ -986,38 +1048,35 @@
                         
                         let imgSize = cellSize * 0.8;
                         ctx.drawImage(pieceImages[p.owner][p.type], -imgSize/2, -imgSize/2, imgSize, imgSize);
-                        
                         ctx.restore();
                     }
                 }
             }
 
-            // 2. 조작용 UI 오버레이 그리기 (가장자리 가림 방지 및 대칭 적용)
             if (selectedPiece && gameState === 'PLAYING') {
                 let p = board[selectedPiece.r][selectedPiece.c];
                 let isBlack = (p.owner === P2);
                 let themeColor = isBlack ? COLORS.P2 : COLORS.P1;
-                let pos = getUIPosition(selectedPiece.r, selectedPiece.c, p.owner);
+                let cx = selectedPiece.c * cellSize + cellSize / 2;
+                let cy = selectedPiece.r * cellSize + cellSize / 2;
 
                 if (uiState === 'ACTION_MENU') {
-                    // [이동] [방향 전환] 분기 메뉴
-                    drawButton(ctx, pos.x - cellSize*0.35, pos.y, cellSize*0.6, cellSize*0.45, "이동", themeColor, 'MENU_MOVE');
-                    drawButton(ctx, pos.x + cellSize*0.35, pos.y, cellSize*0.6, cellSize*0.45, "회전", themeColor, 'MENU_ROTATE');
+                    let pos = getUIPosition(selectedPiece.r, selectedPiece.c, p.owner);
+                    let dirMult = isBlack ? -1 : 1;
+                    drawButton(ctx, pos.x - cellSize*0.35 * dirMult, pos.y, cellSize*0.6, cellSize*0.45, "이동", themeColor, 'MENU_MOVE', null, isBlack);
+                    drawButton(ctx, pos.x + cellSize*0.35 * dirMult, pos.y, cellSize*0.6, cellSize*0.45, "회전", themeColor, 'MENU_ROTATE', null, isBlack);
                 } 
                 else if (uiState === 'MOVE') {
-                    // 이동 시 취소 버튼
-                    drawButton(ctx, pos.x, pos.y, cellSize*0.6, cellSize*0.45, "취소", '#ff4757', 'CANCEL');
+                    drawButton(ctx, cx, cy, cellSize*0.65, cellSize*0.35, "돌아가기", '#ff4757', 'CANCEL', null, isBlack);
                 } 
                 else if (uiState === 'ROTATE') {
-                    // 직관적인 양방향 회전 화살표 및 취소 버튼
-                    let leftSymbol = isBlack ? '↻' : '↺';
-                    let rightSymbol = isBlack ? '↺' : '↻';
-                    let leftDir = isBlack ? 1 : -1;
-                    let rightDir = isBlack ? -1 : 1;
-
-                    drawButton(ctx, pos.x - cellSize*0.6, pos.y, cellSize*0.5, cellSize*0.45, leftSymbol, themeColor, 'DO_ROTATE', {dir: leftDir});
-                    drawButton(ctx, pos.x, pos.y, cellSize*0.5, cellSize*0.45, "취소", '#ff4757', 'CANCEL');
-                    drawButton(ctx, pos.x + cellSize*0.6, pos.y, cellSize*0.5, cellSize*0.45, rightSymbol, themeColor, 'DO_ROTATE', {dir: rightDir});
+                    if (canRotate(selectedPiece.r, selectedPiece.c, p.type, -1)) { 
+                        drawRotationArc(ctx, selectedPiece.r, selectedPiece.c, -1, COLORS.P1);
+                    }
+                    if (canRotate(selectedPiece.r, selectedPiece.c, p.type, 1)) { 
+                        drawRotationArc(ctx, selectedPiece.r, selectedPiece.c, 1, COLORS.P1);
+                    }
+                    drawButton(ctx, cx, cy, cellSize*0.65, cellSize*0.35, "돌아가기", '#ff4757', 'CANCEL', null, isBlack);
                 }
             }
         }
