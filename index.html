@@ -3,576 +3,978 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>탄성력 측정 실험</title>
+    <title>Laser Chess (레이저 장기)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbit&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap');
         
         body {
-            font-family: 'Inter', 'Orbit', sans-serif;
-            background-color: #1a202c;
-            color: #e2e8f0;
-            overflow: hidden; /* Prevent scrolling */
-            touch-action: none; /* Prevent pinch-zoom and scroll on touch devices */
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            color: #fff;
+            font-family: 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .sf-font { font-family: 'Orbitron', sans-serif; }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* Portrait Warning Overlay */
-        @media screen and (orientation: portrait) {
-            #portrait-warning { display: flex !important; }
-            #app-container { display: none !important; }
+        canvas {
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(0, 255, 100, 0.2);
+            border-radius: 8px;
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
         }
 
-        /* Custom Styles for Lab Elements */
-        .wood-texture {
-            background: linear-gradient(to right, #8B5A2B, #A0522D, #8B5A2B);
-            box-shadow: 2px 4px 10px rgba(0,0,0,0.5) inset;
+        .top-bar {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, #222, #000);
+            border-bottom: 2px solid #333;
+            z-index: 10;
         }
 
-        .graph-paper {
-            background-color: #f8fafc;
-            background-image: 
-                linear-gradient(rgba(59, 130, 246, 0.2) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(59, 130, 246, 0.2) 1px, transparent 1px),
-                linear-gradient(rgba(59, 130, 246, 0.5) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(59, 130, 246, 0.5) 1px, transparent 1px);
-            background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        .timer-box {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+        .timer-warning {
+            color: #f00 !important;
+            text-shadow: 0 0 10px #f00 !important;
+            animation: blink 1s infinite;
         }
 
-        .digital-font {
-            font-family: 'Orbit', monospace;
-            text-shadow: 0 0 5px rgba(34, 197, 94, 0.7);
+        .turn-indicator {
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: #333;
+        }
+        .turn-blue { color: #4facfe; text-shadow: 0 0 5px #4facfe; border: 1px solid #4facfe; }
+        .turn-red { color: #ff5e62; text-shadow: 0 0 5px #ff5e62; border: 1px solid #ff5e62; }
+
+        .btn-reset {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: 0.2s;
+        }
+        .btn-reset:active { transform: scale(0.95); }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #444;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
         }
 
-        /* Animations */
-        @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
-        }
-        .error-shake { animation: shake 0.3s ease-in-out; }
-
-        /* Custom Scrollbar */
-        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #2d3748; border-radius: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
-
-        .hidden-item { opacity: 0; pointer-events: none; transform: scale(0.8); transition: all 0.3s ease; }
-        .visible-item { opacity: 1; pointer-events: auto; transform: scale(1); transition: all 0.3s ease; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+        .hidden { display: none !important; }
     </style>
 </head>
-<body class="w-screen h-screen flex flex-col m-0 p-0 select-none">
+<body>
 
-    <!-- Custom Modal -->
-    <div id="custom-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60 transition-opacity duration-300">
-        <div class="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 transform transition-transform duration-300 scale-95" id="custom-modal-content">
-            <h3 class="text-lg font-bold text-white mb-2 text-center">알림</h3>
-            <p id="custom-modal-text" class="text-gray-300 text-sm text-center mb-6">점이 두개 이상이어야 합니다.</p>
-            <div class="flex justify-center">
-                <button onclick="closeModal()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded shadow active:scale-95 transition-all">확인</button>
+    <div id="game-container">
+        <div class="top-bar">
+            <div id="turn-display" class="turn-indicator sf-font turn-blue">BLUE TURN</div>
+            <div id="timer-display" class="timer-box sf-font">60</div>
+            <button class="btn-reset" onclick="showResetModal()">게임 초기화</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="w-full max-w-[800px] text-center mt-4 text-sm text-gray-400 px-4">
+            * 말을 선택하면 좌우에 나타나는 방향 버튼으로 90도 회전하세요.<br>
+            * 행동 즉시 턴이 종료되며 초록색 레이저가 자동 발사됩니다!
+        </div>
+    </div>
+
+    <!-- 초기 설정 모달 -->
+    <div id="intro-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h1 class="text-3xl font-bold text-green-400 mb-4 sf-font">LASER CHESS</h1>
+            <p class="text-gray-300 mb-6">빛의 입사각과 반사각 원리를 이용해 상대의 왕을 제거하세요!</p>
+            <div class="flex flex-col gap-3">
+                <button class="bg-blue-600 hover:bg-blue-500 text-white py-3 rounded font-bold" onclick="startGame('PVP')">2인 플레이 (1:1)</button>
+                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="startGame('AI_EASY')">혼자 하기 (하)</button>
+                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="startGame('AI_MID')">혼자 하기 (중)</button>
+                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="startGame('AI_HARD')">혼자 하기 (상)</button>
+                <button class="bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded font-bold mt-2" onclick="showRulesModal()">게임 규칙 알아보기</button>
             </div>
         </div>
     </div>
 
-    <div id="portrait-warning" class="hidden fixed inset-0 z-50 bg-gray-900 flex-col items-center justify-center text-center p-6">
-        <svg class="w-16 h-16 text-yellow-400 mb-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
-        <h1 class="text-2xl font-bold text-white mb-2">화면을 가로로 돌려주세요</h1>
-        <p class="text-gray-300">이 가상 실험은 가로 모드(Landscape)에 최적화되어 있습니다.</p>
-    </div>
-
-    <div id="app-container" class="flex w-full h-full p-2 gap-4 bg-gray-900 min-h-0 overflow-hidden">
-        
-        <!-- LEFT PANEL: Lab & Controls -->
-        <div class="w-[55%] flex flex-col bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden relative min-h-0">
+    <!-- 규칙 설명 모달 -->
+    <div id="rules-modal" class="modal-overlay hidden">
+        <div class="modal-content text-left max-w-2xl">
+            <h2 class="text-2xl font-bold text-green-400 mb-4 sf-font text-center">게임 규칙 및 기물 설명</h2>
             
-            <!-- Prompt Box -->
-            <div class="bg-blue-900 bg-opacity-40 border-b border-blue-700 p-3 shadow-md shrink-0">
-                <p id="prompt-text" class="text-blue-100 font-semibold text-center text-sm md:text-base transition-opacity duration-300">
-                    용수철의 탄성력을 측정하기 위한 실험을 설계해보세요.
-                </p>
+            <!-- 유튜브 영상 영역 -->
+            <div class="mb-2 w-full aspect-video">
+                <iframe class="w-full h-full rounded" src="https://www.youtube.com/embed/hg_Z59jIgC4" title="레이저 장기 룰 설명" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
+            <p class="text-xs text-gray-400 mb-6 text-center">출처: tvN 더 지니어스: 룰브레이커 레이저 장기 룰 영상</p>
 
-            <!-- Experiment Stage -->
-            <div id="stage" class="flex-1 relative flex items-center justify-center overflow-hidden bg-gray-700 p-2 min-h-[120px]">
-                
-                <!-- Board -->
-                <div id="stage-board" class="hidden-item absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] h-[70%] wood-texture rounded-lg flex items-center justify-center">
-                    
-                    <!-- Graph Paper -->
-                    <div id="stage-paper" class="hidden-item w-[95%] h-[90%] graph-paper rounded-sm relative flex items-center">
-                        
-                        <!-- Ruler (0cm to 20cm) aligned exactly with the sensor connection -->
-                        <div id="ruler-line" class="absolute bottom-4 border-b-2 border-gray-500 z-0" style="left: 110px; right: 30px; height: 30px;">
-                            <div class="absolute left-[0%] bottom-0 flex flex-col items-center -translate-x-1/2"><div class="h-3 w-0.5 bg-gray-600"></div><span class="text-[10px] text-gray-700 font-bold mt-1">0cm</span></div>
-                            <div class="absolute left-[25%] bottom-0 flex flex-col items-center -translate-x-1/2"><div class="h-2 w-0.5 bg-gray-500"></div><span class="text-[10px] text-gray-600 mt-1">5</span></div>
-                            <div class="absolute left-[50%] bottom-0 flex flex-col items-center -translate-x-1/2"><div class="h-3 w-0.5 bg-gray-600"></div><span class="text-[10px] text-gray-700 font-bold mt-1">10</span></div>
-                            <div class="absolute left-[75%] bottom-0 flex flex-col items-center -translate-x-1/2"><div class="h-2 w-0.5 bg-gray-500"></div><span class="text-[10px] text-gray-600 mt-1">15</span></div>
-                            <div class="absolute left-[100%] bottom-0 flex flex-col items-center -translate-x-1/2"><div class="h-3 w-0.5 bg-gray-600"></div><span class="text-[10px] text-gray-700 font-bold mt-1">20cm</span></div>
-                        </div>
-                        
-                        <!-- Hook -->
-                        <div id="stage-hook" class="hidden-item absolute w-4 h-8 bg-gray-400 rounded-full border-2 border-gray-300 shadow-md z-10 flex items-center justify-end" style="left: 15px;">
-                            <div class="w-2 h-2 rounded-full bg-gray-700 mr-0.5"></div>
-                        </div>
-
-                        <!-- Spring SVG Container -->
-                        <div id="stage-spring" class="hidden-item absolute h-12 flex items-center z-20 origin-left" style="left: 25px; width: 85px; padding-left: 10px;">
-                            <svg class="w-full h-full drop-shadow-md" viewBox="0 0 100 20" preserveAspectRatio="none">
-                                <path id="spring-path" d="M0,10 L5,10 L10,2 L15,18 L20,2 L25,18 L30,2 L35,18 L40,2 L45,18 L50,2 L55,18 L60,2 L65,18 L70,2 L75,18 L80,2 L85,18 L90,10 L100,10" 
-                                      stroke="#94a3b8" stroke-width="3" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
-                            </svg>
-                        </div>
-
-                        <!-- Force Sensor -->
-                        <div id="stage-sensor" class="hidden-item absolute z-30 flex items-center" style="left: 110px;">
-                            <div class="w-3 h-6 border-2 border-gray-400 rounded-l-full -mr-1 z-0 bg-gray-500"></div>
-                            <div id="sensor-body" class="w-28 h-14 bg-gray-800 border-2 border-gray-600 rounded-md shadow-[0_5px_15px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative z-10">
-                                <div class="text-[10px] text-gray-400 mb-0.5 uppercase tracking-wider">Force Sensor</div>
-                                <div class="bg-black w-20 h-6 border border-gray-700 rounded flex items-center justify-center">
-                                    <span id="digital-display" class="digital-font text-green-400 text-sm font-bold">0.0 N</span>
-                                </div>
-                                <div class="absolute right-[-10px] top-1/2 -translate-y-1/2 flex flex-col gap-1">
-                                    <div class="w-1.5 h-6 bg-gray-500 rounded-full"></div>
-                                </div>
-                            </div>
-                        </div>
-
+            <div class="space-y-4 text-sm text-gray-300 mb-6 max-h-60 overflow-y-auto pr-2">
+                <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><path d="M10,80 L90,80 L90,90 L10,90 Z" fill="#4facfe"/><path d="M15,80 L25,30 L40,55 L50,15 L60,55 L75,30 L85,80 Z" fill="#4facfe"/><circle cx="25" cy="25" r="6" fill="gold"/><circle cx="50" cy="10" r="8" fill="gold"/><circle cx="75" cy="25" r="6" fill="gold"/></svg>
                     </div>
+                    <div><b>왕:</b> 공격 능력이 없으며, 레이저를 맞으면 제거되어 패배합니다.</div>
+                </div>
+
+                <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><rect x="10" y="10" width="80" height="80" fill="none" stroke="#4facfe" stroke-width="8"/><polygon points="50,20 80,70 20,70" fill="#00ff00"/></svg>
+                    </div>
+                    <div><b>레이저:</b> 이동이 불가능하며 턴이 종료되면 자동으로 레이저를 발사합니다.</div>
+                </div>
+
+                <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><rect x="10" y="10" width="80" height="80" fill="none" stroke="#4facfe" stroke-width="8"/><line x1="15" y1="85" x2="85" y2="15" stroke="white" stroke-width="12" stroke-dasharray="15, 10"/></svg>
+                    </div>
+                    <div><b>스플리터:</b> 레이저를 투과 및 반사시킵니다.</div>
+                </div>
+
+                <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><polygon points="10,90 90,90 10,10" fill="#4facfe"/><line x1="10" y1="10" x2="90" y2="90" stroke="#aaddff" stroke-width="12"/></svg>
+                    </div>
+                    <div><b>세모기사:</b> 거울로 레이저를 반사시킵니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
+                </div>
+
+                <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><rect x="10" y="10" width="80" height="80" fill="#4facfe"/><line x1="10" y1="10" x2="90" y2="10" stroke="#aaddff" stroke-width="16"/></svg>
+                    </div>
+                    <div><b>네모기사:</b> 거울로 레이저를 반사시킵니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
+                </div>
+
+                <div class="border-t border-gray-700 pt-3 mt-4">
+                    <h3 class="font-bold text-green-300 mb-2">나의 턴에 할 수 있는 행동 (제한 시간 60초)</h3>
+                    <ul class="list-disc list-inside space-y-1 text-gray-300">
+                        <li><b>말 이동:</b> 레이저를 제외한 말 한 개를 상하좌우, 대각선으로 한 칸 이동할 수 있습니다.</li>
+                        <li><b>방향 전환:</b> 말의 방향을 90˚ 회전시킵니다. 단, 레이저는 게임 판 바깥 방향으로 회전이 불가능합니다.</li>
+                    </ul>
                 </div>
             </div>
 
-            <!-- Inventory / Setup Tools -->
-            <div id="inventory-area" class="h-16 bg-gray-800 border-t border-gray-700 flex items-center px-4 gap-2 overflow-x-auto custom-scroll shrink-0">
-                <div class="text-xs text-gray-400 mr-2 font-semibold whitespace-nowrap">설치:</div>
-                <button onclick="handleItemClick('board', this)" class="setup-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded shadow-sm border border-gray-600 text-sm font-medium transition-colors shrink-0 flex items-center gap-1">
-                    <span class="w-3 h-3 block rounded-sm" style="background: linear-gradient(to right, #8B5A2B, #A0522D);"></span> 나무판
-                </button>
-                <button onclick="handleItemClick('paper', this)" class="setup-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded shadow-sm border border-gray-600 text-sm font-medium transition-colors shrink-0 flex items-center gap-1">
-                    <span class="w-3 h-3 bg-white border border-blue-200 grid grid-cols-2 grid-rows-2"><span class="border-r border-b border-blue-100"></span><span class="border-b border-blue-100"></span><span class="border-r border-blue-100"></span><span></span></span> 모눈종이
-                </button>
-                <button onclick="handleItemClick('hook', this)" class="setup-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded shadow-sm border border-gray-600 text-sm font-medium transition-colors shrink-0 flex items-center gap-1">
-                    <span class="w-2.5 h-2.5 rounded-full border-2 border-gray-300 block"></span> 고리 나사못
-                </button>
-                <button onclick="handleItemClick('spring', this)" class="setup-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded shadow-sm border border-gray-600 text-sm font-medium transition-colors shrink-0 flex items-center gap-1">
-                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h2l2-5 4 10 4-10 2 5h2"/></svg> 용수철
-                </button>
-                <button onclick="handleItemClick('sensor', this)" class="setup-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded shadow-sm border border-gray-600 text-sm font-medium transition-colors shrink-0 flex items-center gap-1">
-                    <span class="w-3 h-2 bg-gray-800 border border-green-500 rounded-sm block"></span> 힘 센서
-                </button>
-            </div>
-
-            <!-- Bottom Controls (Active after setup) -->
-            <div id="controls-area" class="h-16 py-2 bg-gray-900 border-t border-gray-700 flex items-center justify-between px-4 shrink-0 transition-opacity duration-500 opacity-50 pointer-events-none overflow-x-auto custom-scroll gap-2">
-                <div class="flex gap-2 shrink-0">
-                    <button id="btn-record" onpointerdown="recordData()" class="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded shadow-md font-bold text-sm transition-all active:scale-95 flex items-center gap-1">
-                        <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span> 기록
-                    </button>
-                    <!-- 변경된 버튼: 용수철 되돌리기 -->
-                    <button id="btn-reset-spring" onclick="resetSpringPosition()" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white rounded shadow-md font-bold text-sm transition-all active:scale-95 flex items-center gap-1">
-                        ↩️ 용수철 되돌리기
-                    </button>
-                    <button id="btn-swap" onclick="swapSpring()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded shadow-md font-bold text-sm transition-all active:scale-95">
-                        용수철 변경 (<span id="current-spring-lbl">현재: A, 탄성계수 50N/m</span>)
-                    </button>
-                </div>
-                <button onclick="resetExperiment()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white rounded shadow-md font-bold text-sm transition-all active:scale-95 shrink-0 ml-auto">
-                    실험 초기화
-                </button>
+            <div class="text-center">
+                <button class="bg-gray-600 hover:bg-gray-500 px-6 py-2 rounded text-white font-bold" onclick="closeRulesModal()">닫기</button>
             </div>
         </div>
+    </div>
 
-        <!-- RIGHT PANEL: Graph & Results -->
-        <div class="w-[45%] min-w-[320px] flex flex-col bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden relative min-h-0">
-            
-            <div class="bg-gray-900 p-3 border-b border-gray-700 flex justify-between items-center shrink-0">
-                <h2 class="text-gray-100 font-bold text-sm">탄성력 그래프</h2>
-                <!-- Disabled classes removed so it can trigger the modal -->
-                <button id="btn-draw-graph" onclick="drawGraph()" class="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded shadow-md font-bold text-xs transition-all active:scale-95">
-                    그래프 그리기
-                </button>
+    <!-- 리셋 모달 -->
+    <div id="reset-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold text-red-500 mb-4">경고</h2>
+            <p class="mb-4">정말로 게임을 초기화하시겠나요?<br>초기화를 원하신다면 아래 <b>"게임 초기화"</b>를 입력해주세요.</p>
+            <input type="text" id="reset-input" class="w-full p-2 mb-4 text-black rounded text-center" placeholder="게임 초기화">
+            <div class="flex justify-center gap-4">
+                <button class="bg-gray-500 px-4 py-2 rounded text-white" onclick="closeResetModal()">취소</button>
+                <button class="bg-red-600 px-4 py-2 rounded text-white font-bold" onclick="confirmReset()">확인</button>
             </div>
+        </div>
+    </div>
 
-            <!-- 그래프 컨테이너 영역: 정사각형(Square) 유지, 스크롤 추가, 정적 배치 -->
-            <div class="flex-1 p-2 flex flex-col relative min-h-0 items-center overflow-y-auto custom-scroll w-full gap-4">
-                
-                <!-- Square Chart Wrapper -->
-                <div class="relative bg-white rounded-md p-2 shadow-inner aspect-square w-full max-w-[85%] flex items-center justify-center shrink-0 mt-2">
-                    <canvas id="elasticChart"></canvas>
-                </div>
-                
-                <!-- Conclusion Box (No longer absolute, placed strictly below the graph) -->
-                <div id="conclusion-box" class="w-full max-w-[85%] bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded shadow-lg hidden opacity-0 transition-opacity duration-500 shrink-0 mb-4">
-                    <h3 class="text-yellow-800 font-bold text-xs mb-1">📝 개념 정리</h3>
-                    <p class="text-yellow-900 text-[11px] leading-snug">
-                        탄성력의 크기는 용수철의 늘어난 길이에 비례하고, 그래프의 기울기가 급하면 급할 수록 탄성이 강한 용수철입니다.
-                    </p>
-                </div>
-            </div>
+    <!-- 승리 모달 -->
+    <div id="win-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h1 id="win-text" class="text-4xl font-bold mb-4 sf-font">BLUE WINS!</h1>
+            <button class="bg-green-600 px-6 py-3 rounded text-white font-bold" onclick="location.reload()">처음으로</button>
         </div>
     </div>
 
     <script>
-        // --- State Management ---
-        const EXPECTED_SETUP_ORDER = ['board', 'paper', 'hook', 'spring', 'sensor'];
-        let setupStep = 0;
-        let currentSpring = 'A';
-        let draggedDistance_cm = 0;
-        const MAX_CM = 20;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
         
-        let graphDataA = [];
-        let graphDataB = [];
+        const SIZE = 8;
+        const P1 = 0; // Blue (Bottom)
+        const P2 = 1; // Red (Top)
+        
+        const TYPES = { LASER: 0, SPLITTER: 1, KING: 2, TRIANGLE: 3, SQUARE: 4 };
+        const DIRS = { N: 0, E: 1, S: 2, W: 3 };
 
-        // Spring Configs: B is 2.5x harder to pull visually
-        const springs = {
-            'A': { k: 0.5, color: '#ef4444', name: '용수철 A (50N/m)', stroke: '#94a3b8', resistance: 1.0 },
-            'B': { k: 1.0, color: '#3b82f6', name: '용수철 B (100N/m)', stroke: '#cbd5e1', resistance: 2.5 }
+        let cellSize = 0;
+        let board = [];
+        
+        let currentTurn = P1;
+        let gameMode = 'PVP';
+        let gameState = 'MENU'; // MENU, PLAYING, ANIMATING, GAMEOVER
+        let timeLeft = 60;
+        let timerInterval = null;
+
+        let selectedPiece = null;
+        let validMoves = [];
+
+        let laserBeams = [];
+        let maxAnimTime = 0;
+        let animStartTime = 0;
+        let particles = [];
+
+        const COLORS = {
+            P1: '#4facfe',
+            P2: '#ff5e62',
+            BOARD_DARK: '#0a0a0a',
+            BOARD_LIGHT: '#1a1a1a',
+            LASER: '#00ff00' // 무조건 초록색 고정
         };
 
-        // --- Audio System ---
-        let audioCtx;
+        let audioCtx = null;
+        
         function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
         }
 
-        function playTone(freq, type, duration, vol = 0.1) {
+        function playSound(type) {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
+            const now = audioCtx.currentTime;
+
+            if (type === 'move') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'laser') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.3);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'destroy') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
         }
 
-        function playSuccess() { initAudio(); playTone(600, 'sine', 0.1); setTimeout(() => playTone(800, 'sine', 0.15), 100); }
-        function playError() { initAudio(); playTone(150, 'sawtooth', 0.3, 0.2); }
-        function playRecord() { initAudio(); playTone(1000, 'sine', 0.1, 0.1); setTimeout(() => playTone(1500, 'sine', 0.2, 0.1), 100); }
-        function playTick() { if(!audioCtx) return; playTone(300 + Math.random()*100, 'triangle', 0.05, 0.02); }
-        function playSnap() { initAudio(); playTone(200, 'square', 0.1, 0.1); }
+        const SVG_STRINGS = {
+            [TYPES.KING]: (c) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10,80 L90,80 L90,90 L10,90 Z" fill="${c}"/><path d="M15,80 L25,30 L40,55 L50,15 L60,55 L75,30 L85,80 Z" fill="${c}"/><circle cx="25" cy="25" r="6" fill="gold"/><circle cx="50" cy="10" r="8" fill="gold"/><circle cx="75" cy="25" r="6" fill="gold"/></svg>`,
+            [TYPES.SPLITTER]: (c) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" fill="none" stroke="${c}" stroke-width="8"/><line x1="15" y1="85" x2="85" y2="15" stroke="white" stroke-width="12" stroke-dasharray="15, 10"/></svg>`,
+            [TYPES.LASER]: (c) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" fill="none" stroke="${c}" stroke-width="8"/><polygon points="50,20 80,70 20,70" fill="${COLORS.LASER}"/></svg>`,
+            [TYPES.TRIANGLE]: (c) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="10,90 90,90 10,10" fill="${c}"/><line x1="10" y1="10" x2="90" y2="90" stroke="#aaddff" stroke-width="12"/></svg>`,
+            [TYPES.SQUARE]: (c) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" fill="${c}"/><line x1="10" y1="10" x2="90" y2="10" stroke="#aaddff" stroke-width="16"/></svg>`
+        };
 
-        // --- Chart.js Setup ---
-        let elasticChart;
-        function initChart() {
-            const ctx = document.getElementById('elasticChart').getContext('2d');
+        const pieceImages = {};
+
+        function loadImages(callback) {
+            let loaded = 0;
+            const total = 10;
+            const colors = { [P1]: COLORS.P1, [P2]: COLORS.P2 };
             
-            elasticChart = new Chart(ctx, {
-                type: 'scatter',
-                data: {
-                    datasets: [
-                        { label: springs['A'].name, data: graphDataA, backgroundColor: springs['A'].color, borderColor: springs['A'].color, borderWidth: 2, pointRadius: 5, showLine: false, tension: 0 },
-                        { label: springs['B'].name, data: graphDataB, backgroundColor: springs['B'].color, borderColor: springs['B'].color, borderWidth: 2, pointRadius: 5, showLine: false, tension: 0 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false, // Allows the canvas to fill the CSS aspect-square wrapper exactly
-                    animation: { duration: 300 },
-                    scales: {
-                        x: {
-                            type: 'linear', position: 'bottom', min: 0, max: 20,
-                            title: { display: true, text: '늘어난 길이 (cm)', font: { family: 'Inter', weight: 'bold' } },
-                            grid: { color: '#e2e8f0' }
-                        },
-                        y: {
-                            min: 0, max: 20,
-                            title: { display: true, text: '탄성력 (N)', font: { family: 'Inter', weight: 'bold' } },
-                            grid: { color: '#e2e8f0' }
-                        }
-                    },
-                    plugins: { legend: { position: 'top', labels: { font: { family: 'Inter' } } }, tooltip: { enabled: true } }
+            for (let p in colors) {
+                pieceImages[p] = {};
+                for (let t in SVG_STRINGS) {
+                    let svg = SVG_STRINGS[t](colors[p]);
+                    let blob = new Blob([svg], {type: 'image/svg+xml'});
+                    let url = URL.createObjectURL(blob);
+                    let img = new Image();
+                    img.onload = () => {
+                        loaded++;
+                        if (loaded === total) callback();
+                    };
+                    img.src = url;
+                    pieceImages[p][t] = img;
                 }
-            });
-        }
-
-        // --- Setup Logic ---
-        const prompts = [
-            "용수철의 탄성력을 측정하기 위한 실험을 설계해보세요.",
-            "이제 용수철이 늘어난 길이를 알기 위해 무엇을 나무판 위에 붙여야 할까요?",
-            "잘했습니다! 용수철을 고정시키기 위해 무엇이 필요할까요?",
-            "이제 용수철을 고정시킬 수 있습니다. 고리 나사못에 무엇을 걸어야 할까요?",
-            "이제 탄성력을 측정하기 위해서는 무엇이 필요할까요?",
-            "세팅 완료! 힘 센서를 당긴 후, 그 자리에 둔 채로 기록 버튼을 누르세요."
-        ];
-
-        function handleItemClick(itemType, btnEl) {
-            initAudio();
-            if (setupStep >= 5) return;
-
-            if (EXPECTED_SETUP_ORDER[setupStep] === itemType) {
-                playSuccess();
-                showStageItem(itemType);
-                btnEl.classList.add('opacity-30', 'pointer-events-none');
-                btnEl.classList.remove('hover:bg-gray-600');
-                
-                setupStep++;
-                updatePrompt(prompts[setupStep]);
-                if (setupStep === 5) completeSetup();
-            } else {
-                playError();
-                btnEl.classList.add('error-shake');
-                setTimeout(() => btnEl.classList.remove('error-shake'), 300);
             }
         }
 
-        function showStageItem(itemType) {
-            const el = document.getElementById(`stage-${itemType}`);
-            if (el) { el.classList.remove('hidden-item'); el.classList.add('visible-item'); }
+        function initBoard() {
+            board = Array(SIZE).fill(null).map(() => Array(SIZE).fill(null));
+            const add = (c, r, type, owner, rot) => { board[r][c] = { type, owner, rot }; };
+
+            add(7, 7, TYPES.LASER, P1, 0); // H1 레이저, 앞(북쪽) 바라봄
+            add(7, 0, TYPES.SPLITTER, P1, 0); // H8 스플리터
+            add(4, 7, TYPES.KING, P1, 0); // E1 왕
+            
+            add(2, 7, TYPES.TRIANGLE, P1, 3); // C1 거울은 B2 바라봄
+            add(3, 4, TYPES.TRIANGLE, P1, 3); // D4 거울은 C5 바라봄
+            add(4, 4, TYPES.TRIANGLE, P1, 0); // E4 거울은 F5 바라봄
+            add(7, 3, TYPES.TRIANGLE, P1, 2); // H5 거울은 G4(남서쪽) 바라봄
+            add(1, 0, TYPES.TRIANGLE, P1, 2); // B8 거울은 A7 바라봄
+            
+            add(3, 7, TYPES.SQUARE, P1, 0); // D1
+            add(5, 7, TYPES.SQUARE, P1, 0); // F1
+
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (board[r][c] && board[r][c].owner === P1) {
+                        let p = board[r][c];
+                        let nr = 7 - r;
+                        let nc = 7 - c;
+                        let nrot = (p.rot + 2) % 4;
+                        if(!board[nr][nc]) {
+                            board[nr][nc] = { type: p.type, owner: P2, rot: nrot };
+                        }
+                    }
+                }
+            }
         }
 
-        function updatePrompt(text) {
-            const promptEl = document.getElementById('prompt-text');
-            promptEl.style.opacity = 0;
-            setTimeout(() => { promptEl.innerText = text; promptEl.style.opacity = 1; }, 300);
+        function resize() {
+            const container = document.getElementById('game-container');
+            const w = container.clientWidth;
+            const h = container.clientHeight - 80;
+            const sz = Math.min(w * 0.95, h * 0.95, 600);
+            canvas.width = sz;
+            canvas.height = sz;
+            cellSize = sz / SIZE;
+            drawAll();
+        }
+        window.addEventListener('resize', resize);
+
+        function startGame(mode) {
+            initAudio(); 
+            gameMode = mode;
+            document.getElementById('intro-modal').classList.add('hidden');
+            initBoard();
+            currentTurn = P1;
+            gameState = 'PLAYING'; 
+            resize(); 
+            resetTimer();
         }
 
-        function completeSetup() {
-            document.getElementById('inventory-area').classList.add('opacity-50', 'pointer-events-none');
-            const controls = document.getElementById('controls-area');
-            controls.classList.remove('opacity-50', 'pointer-events-none');
-            controls.classList.add('opacity-100');
-            initDrag();
+        function showRulesModal() {
+            document.getElementById('rules-modal').classList.remove('hidden');
         }
 
-        // --- Measurement (Drag) Logic ---
-        let isDragging = false;
-        let startClientX = 0;
-        let currentPxOffset = 0; // Tracks the actual stretched pixel amount
-        let initialPxOffsetForDrag = 0; // Where the drag started from
+        function closeRulesModal() {
+            document.getElementById('rules-modal').classList.add('hidden');
+        }
+
+        function showResetModal() {
+            document.getElementById('reset-modal').classList.remove('hidden');
+            document.getElementById('reset-input').value = '';
+        }
         
-        const sensorEl = document.getElementById('sensor-body');
-        const sensorContainer = document.getElementById('stage-sensor');
-        const springContainer = document.getElementById('stage-spring');
-        const displayEl = document.getElementById('digital-display');
-        let lastTickDistance = 0;
-
-        function initDrag() {
-            sensorEl.addEventListener('pointerdown', dragStart);
-            window.addEventListener('pointermove', dragMove, {passive: false});
-            window.addEventListener('pointerup', dragEnd);
+        function closeResetModal() {
+            document.getElementById('reset-modal').classList.add('hidden');
         }
-
-        function dragStart(e) {
-            if (setupStep < 5) return;
-            initAudio();
-            isDragging = true;
-            startClientX = e.clientX;
-            initialPxOffsetForDrag = currentPxOffset;
-            sensorEl.classList.add('scale-105', 'bg-gray-700');
-            
-            // Remove transitions during drag
-            sensorContainer.style.transition = 'none';
-            springContainer.style.transition = 'none';
-        }
-
-        function dragMove(e) {
-            if (!isDragging) return;
-            e.preventDefault(); // Prevent scrolling on touch devices
-            
-            const currentX = e.clientX;
-            const deltaX = currentX - startClientX;
-            
-            // Apply spring resistance to mouse movement
-            const effectiveDelta = deltaX / springs[currentSpring].resistance;
-            
-            let newPxOffset = initialPxOffsetForDrag + effectiveDelta;
-            
-            const rulerEl = document.getElementById('ruler-line');
-            const maxPx = rulerEl ? rulerEl.clientWidth : 200; // Match 20cm exact ruler width
-            
-            // Clamping
-            if (newPxOffset < 0) newPxOffset = 0;
-            if (newPxOffset > maxPx) newPxOffset = maxPx;
-
-            currentPxOffset = newPxOffset;
-            draggedDistance_cm = (currentPxOffset / maxPx) * MAX_CM;
-            
-            updateVisuals(currentPxOffset, draggedDistance_cm);
-
-            if (Math.abs(draggedDistance_cm - lastTickDistance) >= 0.5) {
-                playTick();
-                lastTickDistance = draggedDistance_cm;
-            }
-        }
-
-        function dragEnd(e) {
-            if (!isDragging) return;
-            isDragging = false;
-            sensorEl.classList.remove('scale-105', 'bg-gray-700');
-            // NOTICE: No snap back here. The sensor stays exactly where it was released.
-        }
-
-        function resetSpringPosition() {
-            if (currentPxOffset === 0) return; // Already at 0
-            
-            playSnap();
-            sensorContainer.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            springContainer.style.transition = 'width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            
-            currentPxOffset = 0;
-            draggedDistance_cm = 0;
-            lastTickDistance = 0;
-            
-            updateVisuals(0, 0);
-            
-            // Clean up transitions after animation
-            setTimeout(() => {
-                sensorContainer.style.transition = 'none';
-                springContainer.style.transition = 'none';
-            }, 400);
-        }
-
-        function updateVisuals(pxDelta, cm) {
-            sensorContainer.style.transform = `translateX(${pxDelta}px)`;
-            springContainer.style.width = `${85 + pxDelta}px`; // Updated base width to 85px
-            updateDisplay(cm);
-        }
-
-        function updateDisplay(cm) {
-            const force = cm * springs[currentSpring].k;
-            displayEl.innerText = `${force.toFixed(1)} N`; 
-        }
-
-        // --- Controls Logic ---
-        function swapSpring() {
-            initAudio();
-            playTick();
-            
-            // Reverting spring to 0 before swapping for safety
-            resetSpringPosition();
-            
-            currentSpring = currentSpring === 'A' ? 'B' : 'A';
-            const springText = currentSpring === 'A' ? '현재: A, 탄성계수 50N/m' : '현재: B, 탄성계수 100N/m';
-            document.getElementById('current-spring-lbl').innerText = springText;
-            document.getElementById('spring-path').setAttribute('stroke', springs[currentSpring].stroke);
-        }
-
-        function recordData() {
-            if (setupStep < 5) return;
-            playRecord();
-            const cm = parseFloat(draggedDistance_cm.toFixed(1));
-            const force = parseFloat((cm * springs[currentSpring].k).toFixed(1));
-            const point = { x: cm, y: force };
-            
-            if (currentSpring === 'A') {
-                if(!graphDataA.some(p => Math.abs(p.x - cm) < 0.5)) graphDataA.push(point);
+        
+        function confirmReset() {
+            const input = document.getElementById('reset-input').value;
+            if (input.trim() === "게임 초기화") {
+                clearInterval(timerInterval);
+                gameState = 'MENU';
+                selectedPiece = null;
+                particles = [];
+                laserBeams = [];
+                board = []; 
+                closeResetModal();
+                
+                document.getElementById('intro-modal').classList.remove('hidden');
+                document.getElementById('timer-display').innerText = "60";
+                
+                ctx.fillStyle = '#050505';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else {
-                if(!graphDataB.some(p => Math.abs(p.x - cm) < 0.5)) graphDataB.push(point);
+                alert("정확히 '게임 초기화'를 입력해주세요.");
             }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 60;
+            updateTimerUI();
             
-            graphDataA.sort((a,b) => a.x - b.x);
-            graphDataB.sort((a,b) => a.x - b.x);
+            if (currentTurn === P2 && gameMode.startsWith('AI_')) {
+                setTimeout(doAITurn, 1000);
+            } else {
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateTimerUI();
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        endTurnAction();
+                    }
+                }, 1000);
+            }
+        }
+
+        function updateTimerUI() {
+            const t = document.getElementById('timer-display');
+            t.innerText = timeLeft;
+            if (timeLeft <= 10) t.classList.add('timer-warning');
+            else t.classList.remove('timer-warning');
+
+            const trn = document.getElementById('turn-display');
+            if (currentTurn === P1) {
+                trn.innerText = "BLUE TURN";
+                trn.className = "turn-indicator sf-font turn-blue";
+            } else {
+                trn.innerText = "RED TURN";
+                trn.className = "turn-indicator sf-font turn-red";
+            }
+        }
+
+        function doRotate(dir) {
+            if (!selectedPiece || gameState !== 'PLAYING') return;
             
-            elasticChart.update();
-            checkEnableDrawButton();
+            let p = board[selectedPiece.r][selectedPiece.c];
+            if (!p) return;
+
+            let newRot = (p.rot + dir + 4) % 4;
+
+            if (p.type === TYPES.LASER) {
+                if ((newRot === 0 && selectedPiece.r === 0) || 
+                    (newRot === 1 && selectedPiece.c === SIZE - 1) || 
+                    (newRot === 2 && selectedPiece.r === SIZE - 1) || 
+                    (newRot === 3 && selectedPiece.c === 0)) { 
+                    return; // 바깥으로 회전 무시 (턴 소모 X)
+                }
+            }
+
+            p.rot = newRot; 
+            playSound('move');
+            endTurnAction();
         }
 
-        // Custom Modal Logic
-        function showModal(msg) {
-            const modal = document.getElementById('custom-modal');
-            const content = document.getElementById('custom-modal-content');
-            document.getElementById('custom-modal-text').innerText = msg;
-            modal.classList.remove('hidden');
-            void modal.offsetWidth; // trigger reflow
-            content.classList.remove('scale-95');
-            content.classList.add('scale-100');
-        }
+        canvas.addEventListener('pointerdown', (e) => {
+            if (gameState !== 'PLAYING') return;
+            if (currentTurn === P2 && gameMode.startsWith('AI_')) return;
 
-        function closeModal() {
-            const modal = document.getElementById('custom-modal');
-            const content = document.getElementById('custom-modal-content');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
-        }
-
-        function checkEnableDrawButton() {
-            // Button is always visually enabled now, modal handles validation
-        }
-
-        function drawGraph() {
-            // Check if current spring has at least 2 points
-            const currentData = currentSpring === 'A' ? graphDataA : graphDataB;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
             
-            if (currentData.length < 2) {
-                playError();
-                showModal("점이 두개 이상이어야 합니다.");
+            // 회전 버튼 클릭 체크 (말 좌우에 그려지는 버튼 영역)
+            if (selectedPiece) {
+                let r = selectedPiece.r;
+                let c = selectedPiece.c;
+                let cx = c * cellSize + cellSize / 2;
+                let cy = r * cellSize + cellSize / 2;
+                let btnOffset = cellSize * 0.7;
+                let btnRadius = cellSize * 0.22;
+
+                // 레드 플레이어는 화면 위쪽이므로 방향을 180도 대칭(반전) 적용
+                let isRed = (board[r][c] && board[r][c].owner === P2);
+                let leftDir = isRed ? 1 : -1;
+                let rightDir = isRed ? -1 : 1;
+
+                let leftBtnX = cx - btnOffset;
+                let rightBtnX = cx + btnOffset;
+                let btnY = cy;
+
+                // 왼쪽 회전 버튼 클릭
+                if (Math.hypot(x - leftBtnX, y - btnY) <= btnRadius) {
+                    doRotate(leftDir);
+                    return;
+                }
+                // 오른쪽 회전 버튼 클릭
+                if (Math.hypot(x - rightBtnX, y - btnY) <= btnRadius) {
+                    doRotate(rightDir);
+                    return;
+                }
+            }
+
+            const c = Math.floor(x / cellSize);
+            const r = Math.floor(y / cellSize);
+
+            if (c < 0 || c >= SIZE || r < 0 || r >= SIZE) return;
+
+            if (selectedPiece && validMoves.some(m => m.r === r && m.c === c)) {
+                board[r][c] = board[selectedPiece.r][selectedPiece.c];
+                board[selectedPiece.r][selectedPiece.c] = null;
+                playSound('move');
+                endTurnAction();
                 return;
             }
 
-            playSuccess();
-            
-            // 데이터가 2개 이상일 때 선 보이기 활성화
-            if (graphDataA.length >= 2) elasticChart.data.datasets[0].showLine = true;
-            if (graphDataB.length >= 2) elasticChart.data.datasets[1].showLine = true;
-            elasticChart.update();
-            
-            const box = document.getElementById('conclusion-box');
-            // hidden 제거 후 opacity 적용을 위해 약간의 지연 사용
-            box.classList.remove('hidden');
-            setTimeout(() => {
-                box.classList.remove('opacity-0');
-                box.classList.add('opacity-100');
-            }, 10);
+            let p = board[r][c];
+            if (p && p.owner === currentTurn) {
+                selectedPiece = { r, c };
+                calcValidMoves(r, c, p);
+            } else {
+                selectedPiece = null;
+                validMoves = [];
+            }
+            drawAll();
+        });
+
+        function calcValidMoves(r, c, p) {
+            validMoves = [];
+            if (p.type === TYPES.LASER) return;
+
+            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+            for (let d of dirs) {
+                let nr = r + d[0], nc = c + d[1];
+                if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !board[nr][nc]) {
+                    validMoves.push({ r: nr, c: nc });
+                }
+            }
         }
 
-        function resetExperiment() {
-            initAudio();
-            playTick();
-            
-            setupStep = 0;
-            currentSpring = 'A';
-            currentPxOffset = 0;
-            draggedDistance_cm = 0;
-            graphDataA.length = 0;
-            graphDataB.length = 0;
-            
-            updatePrompt(prompts[0]);
-            document.getElementById('current-spring-lbl').innerText = '현재: A, 탄성계수 50N/m';
-            document.getElementById('spring-path').setAttribute('stroke', springs['A'].stroke);
-            
-            EXPECTED_SETUP_ORDER.forEach(item => {
-                const el = document.getElementById(`stage-${item}`);
-                if(el) { el.classList.remove('visible-item'); el.classList.add('hidden-item'); }
-            });
-            
-            document.querySelectorAll('.setup-btn').forEach(btn => {
-                btn.classList.remove('opacity-30', 'pointer-events-none');
-                btn.classList.add('hover:bg-gray-600');
-            });
-            
-            document.getElementById('inventory-area').classList.remove('opacity-50', 'pointer-events-none');
-            document.getElementById('controls-area').classList.add('opacity-50', 'pointer-events-none');
-            document.getElementById('controls-area').classList.remove('opacity-100');
-            
-            sensorContainer.style.transition = 'none';
-            springContainer.style.transition = 'none';
-            updateVisuals(0, 0);
-            
-            elasticChart.data.datasets[0].showLine = false;
-            elasticChart.data.datasets[1].showLine = false;
-            elasticChart.update();
-            
-            const box = document.getElementById('conclusion-box');
-            box.classList.add('hidden', 'opacity-0');
-            box.classList.remove('opacity-100');
-            
-            sensorEl.removeEventListener('pointerdown', dragStart);
-            window.removeEventListener('pointermove', dragMove);
-            window.removeEventListener('pointerup', dragEnd);
+        function endTurnAction() {
+            clearInterval(timerInterval);
+            gameState = 'ANIMATING';
+            selectedPiece = null;
+            validMoves = [];
+            drawAll();
+            fireLaser(currentTurn);
         }
 
-        // Init
-        window.onload = initChart;
+        function fireLaser(owner) {
+            playSound('laser'); 
+            laserBeams = [];
+            let queue = [];
+            
+            let lr = -1, lc = -1, lrot = -1;
+            for(let r=0; r<SIZE; r++) {
+                for(let c=0; c<SIZE; c++) {
+                    let p = board[r][c];
+                    if(p && p.type === TYPES.LASER && p.owner === owner) {
+                        lr = r; lc = c; lrot = p.rot;
+                        break;
+                    }
+                }
+                if (lr !== -1) break; 
+            }
+            if(lr === -1) return;
+
+            queue.push({ r: lr, c: lc, dir: lrot, path: [{r: lr, c: lc}], startDist: 0 });
+            
+            let deadPieces = [];
+            let maxBounces = 30;
+
+            const dy = [-1, 0, 1, 0];
+            const dx = [0, 1, 0, -1];
+
+            while(queue.length > 0 && maxBounces > 0) {
+                let b = queue.shift();
+                maxBounces--;
+                
+                let curR = b.r, curC = b.c, dir = b.dir;
+                let path = b.path;
+                let startDist = b.startDist;
+
+                while(true) {
+                    curR += dy[dir];
+                    curC += dx[dir];
+
+                    if(curR < 0 || curR >= SIZE || curC < 0 || curC >= SIZE) {
+                        laserBeams.push({ path: [...path, {r: curR, c: curC}], hit: null, startDist });
+                        break;
+                    }
+
+                    path.push({r: curR, c: curC});
+                    let p = board[curR][curC];
+
+                    if (p) {
+                        let result = getHitResult(p, dir);
+                        
+                        if (result === 'DESTROY') {
+                            if (!deadPieces.some(d => d.r === curR && d.c === curC)) {
+                                deadPieces.push({ r: curR, c: curC, piece: p });
+                            }
+                            laserBeams.push({ path: [...path], hit: {r: curR, c: curC}, startDist });
+                            break;
+                        } 
+                        else if (result === 'BLOCK') {
+                            laserBeams.push({ path: [...path], hit: null, startDist });
+                            break;
+                        }
+                        else if (result === 'TRANSMIT_AND_REFLECT') {
+                            let refDir = getReflectDir(p.rot, dir, true);
+                            if (refDir !== -1) {
+                                queue.push({ 
+                                    r: curR, c: curC, 
+                                    dir: refDir, 
+                                    path: [{r: curR, c: curC}], 
+                                    startDist: startDist + path.length - 1 
+                                });
+                            }
+                        }
+                        else {
+                            dir = result; 
+                        }
+                    }
+                }
+            }
+
+            animStartTime = performance.now();
+            maxAnimTime = 2500; 
+            
+            requestAnimationFrame((t) => animateLaser(t, deadPieces));
+        }
+
+        function getHitResult(p, inDir) {
+            if (p.type === TYPES.LASER) return 'BLOCK';
+            if (p.type === TYPES.KING) return 'DESTROY';
+            if (p.type === TYPES.SPLITTER) return 'TRANSMIT_AND_REFLECT';
+
+            if (p.type === TYPES.TRIANGLE) {
+                if (p.rot === 0) { if (inDir===2) return 1; if (inDir===3) return 0; }
+                if (p.rot === 1) { if (inDir===0) return 1; if (inDir===3) return 2; }
+                if (p.rot === 2) { if (inDir===0) return 3; if (inDir===1) return 2; }
+                if (p.rot === 3) { if (inDir===1) return 0; if (inDir===2) return 3; }
+                return 'DESTROY';
+            }
+
+            if (p.type === TYPES.SQUARE) {
+                if (p.rot === 0 && inDir === 2) return 0;
+                if (p.rot === 1 && inDir === 3) return 1;
+                if (p.rot === 2 && inDir === 0) return 2;
+                if (p.rot === 3 && inDir === 1) return 3;
+                return 'DESTROY';
+            }
+
+            return 'DESTROY';
+        }
+
+        function getReflectDir(rot, inDir, isSplitter) {
+            if (rot === 0 || rot === 2) {
+                if (inDir===0) return 3; if (inDir===1) return 2; if (inDir===2) return 1; if (inDir===3) return 0;
+            } else {
+                if (inDir===0) return 1; if (inDir===1) return 0; if (inDir===2) return 3; if (inDir===3) return 2;
+            }
+            return -1;
+        }
+
+        function animateLaser(timestamp, deadPieces) {
+            if (gameState === 'MENU') return;
+
+            let progress = (timestamp - animStartTime) / maxAnimTime;
+            if (progress > 1.0) progress = 1.0;
+            
+            drawAll(); 
+
+            ctx.save();
+            ctx.strokeStyle = COLORS.LASER; 
+            ctx.lineWidth = cellSize * 0.1;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = COLORS.LASER;
+
+            let maxTotalDist = 0;
+            laserBeams.forEach(b => {
+                let d = b.startDist + b.path.length - 1;
+                if (d > maxTotalDist) maxTotalDist = d;
+            });
+            if (maxTotalDist === 0) maxTotalDist = 1;
+
+            let currentDrawDist = progress * maxTotalDist;
+            let allFinished = true;
+
+            laserBeams.forEach(b => {
+                let path = b.path;
+                let startDist = b.startDist;
+                let totalSegs = path.length - 1;
+
+                if (currentDrawDist <= startDist) {
+                    allFinished = false;
+                    return; 
+                }
+
+                let drawSegs = currentDrawDist - startDist;
+                if (drawSegs < totalSegs) allFinished = false;
+                if (drawSegs > totalSegs) drawSegs = totalSegs;
+
+                ctx.beginPath();
+                for (let i = 0; i < path.length - 1; i++) {
+                    if (drawSegs <= i) break;
+                    
+                    let p1 = path[i];
+                    let p2 = path[i+1];
+                    let x1 = p1.c * cellSize + cellSize/2;
+                    let y1 = p1.r * cellSize + cellSize/2;
+                    let x2 = p2.c * cellSize + cellSize/2;
+                    let y2 = p2.r * cellSize + cellSize/2;
+
+                    if (i === 0) ctx.moveTo(x1, y1);
+                    else ctx.lineTo(x1, y1);
+
+                    if (drawSegs < i + 1) {
+                        let ratio = drawSegs - i;
+                        ctx.lineTo(x1 + (x2-x1)*ratio, y1 + (y2-y1)*ratio);
+                    } else {
+                        ctx.lineTo(x2, y2);
+                    }
+                }
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            if (progress >= 1.0 || allFinished) {
+                if (deadPieces.length > 0) {
+                    playSound('destroy');
+                }
+
+                deadPieces.forEach(d => {
+                    spawnParticles(d.c * cellSize + cellSize/2, d.r * cellSize + cellSize/2, d.piece.owner === P1 ? COLORS.P1 : COLORS.P2);
+                    board[d.r][d.c] = null;
+                    
+                    if (d.piece.type === TYPES.KING) {
+                        setTimeout(() => showWinModal(d.piece.owner === P1 ? P2 : P1), 1000);
+                        gameState = 'GAMEOVER';
+                    }
+                });
+
+                if (gameState !== 'GAMEOVER') {
+                    currentTurn = currentTurn === P1 ? P2 : P1;
+                    gameState = 'PLAYING';
+                    resetTimer();
+                    requestAnimationFrame(animateParticlesLoop);
+                } else {
+                    requestAnimationFrame(animateParticlesLoop);
+                }
+            } else {
+                requestAnimationFrame((t) => animateLaser(t, deadPieces));
+            }
+        }
+
+        function spawnParticles(x, y, color) {
+            for(let i=0; i<30; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function animateParticlesLoop() {
+            if (gameState === 'MENU') return;
+
+            if (particles.length === 0 && gameState === 'PLAYING') {
+                drawAll();
+                return;
+            }
+            if (gameState === 'GAMEOVER' || particles.length > 0) {
+                drawAll();
+                ctx.save();
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    let p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.05;
+                    
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                    } else {
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(p.x, p.y, cellSize*0.1, cellSize*0.1);
+                    }
+                }
+                ctx.restore();
+                requestAnimationFrame(animateParticlesLoop);
+            }
+        }
+
+        function showWinModal(winner) {
+            const m = document.getElementById('win-modal');
+            const t = document.getElementById('win-text');
+            m.classList.remove('hidden');
+            if (winner === P1) {
+                t.innerText = "BLUE WINS!";
+                t.className = "text-4xl font-bold mb-4 sf-font text-blue-400";
+            } else {
+                t.innerText = "RED WINS!";
+                t.className = "text-4xl font-bold mb-4 sf-font text-red-500";
+            }
+        }
+
+        function doAITurn() {
+            if(gameState !== 'PLAYING') return;
+            
+            let moves = [];
+            for(let r=0; r<SIZE; r++) {
+                for(let c=0; c<SIZE; c++) {
+                    let p = board[r][c];
+                    if (p && p.owner === P2) {
+                        if (p.type !== TYPES.LASER || (p.type === TYPES.LASER && p.rot !== 2)) { 
+                            moves.push({type:'rot', r, c, nrot: (p.rot+1)%4});
+                            moves.push({type:'rot', r, c, nrot: (p.rot+3)%4});
+                        }
+                        
+                        if (p.type !== TYPES.LASER) {
+                            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+                            for(let d of dirs) {
+                                let nr = r+d[0], nc = c+d[1];
+                                if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && !board[nr][nc]) {
+                                    moves.push({type:'mov', r, c, nr, nc});
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(moves.length === 0) {
+                endTurnAction(); return;
+            }
+
+            let act = moves[Math.floor(Math.random() * moves.length)];
+            
+            if (act.type === 'rot') {
+                board[act.r][act.c].rot = act.nrot;
+            } else {
+                board[act.nr][act.nc] = board[act.r][act.c];
+                board[act.r][act.c] = null;
+            }
+            
+            playSound('move');
+            endTurnAction();
+        }
+
+        function drawAll() {
+            if (gameState === 'MENU' || board.length === 0) return;
+
+            ctx.fillStyle = '#050505'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    let x = c * cellSize;
+                    let y = r * cellSize;
+
+                    ctx.fillStyle = (r + c) % 2 === 0 ? COLORS.BOARD_LIGHT : COLORS.BOARD_DARK;
+                    ctx.fillRect(x, y, cellSize, cellSize);
+
+                    if (selectedPiece && selectedPiece.r === r && selectedPiece.c === c) {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.fillRect(x, y, cellSize, cellSize);
+                    }
+                    if (validMoves.some(m => m.r === r && m.c === c)) {
+                        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                        ctx.beginPath();
+                        ctx.arc(x + cellSize/2, y + cellSize/2, cellSize * 0.2, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+
+                    let p = board[r][c];
+                    if (p && pieceImages[p.owner][p.type]) {
+                        ctx.save();
+                        ctx.translate(x + cellSize/2, y + cellSize/2);
+                        ctx.rotate(p.rot * Math.PI / 2);
+                        
+                        let imgSize = cellSize * 0.8;
+                        ctx.drawImage(pieceImages[p.owner][p.type], -imgSize/2, -imgSize/2, imgSize, imgSize);
+                        
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // 선택된 말의 좌우에 직관적인 회전 버튼(방향키) 그리기
+            if (selectedPiece && gameState === 'PLAYING') {
+                let r = selectedPiece.r;
+                let c = selectedPiece.c;
+                let cx = c * cellSize + cellSize / 2;
+                let cy = r * cellSize + cellSize / 2;
+                let btnOffset = cellSize * 0.7;
+                let btnRadius = cellSize * 0.22;
+
+                let isRed = (board[r][c] && board[r][c].owner === P2);
+                let themeColor = isRed ? COLORS.P2 : COLORS.P1;
+
+                // 레드 플레이어는 180도 대칭(반전) 적용
+                let leftSymbol = isRed ? '↻' : '↺';
+                let rightSymbol = isRed ? '↺' : '↻';
+
+                ctx.save();
+                // 왼쪽 버튼
+                ctx.fillStyle = 'rgba(30, 30, 30, 0.9)';
+                ctx.strokeStyle = themeColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(cx - btnOffset, cy, btnRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = `${cellSize * 0.22}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(leftSymbol, cx - btnOffset, cy);
+
+                // 오른쪽 버튼
+                ctx.fillStyle = 'rgba(30, 30, 30, 0.9)';
+                ctx.strokeStyle = themeColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(cx + btnOffset, cy, btnRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.fillText(rightSymbol, cx + btnOffset, cy);
+                ctx.restore();
+            }
+        }
+
+        window.onload = () => {
+            loadImages(() => {
+                resize(); 
+            });
+        };
+
     </script>
 </body>
 </html>
