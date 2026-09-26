@@ -124,7 +124,7 @@
         <canvas id="gameCanvas"></canvas>
 
         <div class="w-full max-w-[800px] text-center mt-4 text-sm text-gray-400 px-4">
-            * 말을 선택하면 좌우에 나타나는 방향 버튼으로 90도 회전하세요.<br>
+            * 말을 선택하면 나타나는 방향 버튼으로 90도 회전하세요.<br>
             * 행동 즉시 턴이 종료되며 초록색 레이저가 자동 발사됩니다!
         </div>
     </div>
@@ -500,7 +500,7 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            // 회전 버튼 클릭 체크 (말 좌우에 그려지는 버튼 영역)
+            // 회전 버튼 클릭 체크 (말 주변에 그려지는 버튼 영역)
             if (selectedPiece) {
                 let r = selectedPiece.r;
                 let c = selectedPiece.c;
@@ -509,14 +509,28 @@
                 let btnOffset = cellSize * 0.7;
                 let btnRadius = cellSize * 0.22;
 
-                // 레드 플레이어는 화면 위쪽이므로 방향을 180도 대칭(반전) 적용
+                // 가장자리(왼쪽/오른쪽 끝)일 때 버튼 위치 보정값 계산
+                let leftShift = 0;
+                let rightShift = 0;
+                if (c === 0) {
+                    leftShift = cellSize * 0.35;
+                    rightShift = cellSize * 0.35;
+                } else if (c === SIZE - 1) {
+                    leftShift = -cellSize * 0.35;
+                    rightShift = -cellSize * 0.35;
+                }
+
                 let isRed = (board[r][c] && board[r][c].owner === P2);
                 let leftDir = isRed ? 1 : -1;
                 let rightDir = isRed ? -1 : 1;
 
-                let leftBtnX = cx - btnOffset;
-                let rightBtnX = cx + btnOffset;
+                let leftBtnX = cx - btnOffset + leftShift;
+                let rightBtnX = cx + btnOffset + rightShift;
                 let btnY = cy;
+
+                // 세로축 끝일 경우(위/아래 끝) 수직 오프셋 보정 적용 처리용 (필요시 아래쪽으로 이동)
+                if (r === 0) btnY = cy + cellSize * 0.35;
+                if (r === SIZE - 1) btnY = cy - cellSize * 0.35;
 
                 // 왼쪽 회전 버튼 클릭
                 if (Math.hypot(x - leftBtnX, y - btnY) <= btnRadius) {
@@ -922,7 +936,7 @@
                 }
             }
 
-            // 선택된 말의 좌우에 직관적인 회전 버튼(방향키) 그리기
+            // 선택된 말 주변에 회전 버튼(방향키) 그리기 (가장자리 잘림 방지 보정 포함)
             if (selectedPiece && gameState === 'PLAYING') {
                 let r = selectedPiece.r;
                 let c = selectedPiece.c;
@@ -931,12 +945,28 @@
                 let btnOffset = cellSize * 0.7;
                 let btnRadius = cellSize * 0.22;
 
+                let leftShift = 0;
+                let rightShift = 0;
+                if (c === 0) {
+                    leftShift = cellSize * 0.35;
+                    rightShift = cellSize * 0.35;
+                } else if (c === SIZE - 1) {
+                    leftShift = -cellSize * 0.35;
+                    rightShift = -cellSize * 0.35;
+                }
+
                 let isRed = (board[r][c] && board[r][c].owner === P2);
                 let themeColor = isRed ? COLORS.P2 : COLORS.P1;
 
-                // 레드 플레이어는 180도 대칭(반전) 적용
                 let leftSymbol = isRed ? '↻' : '↺';
                 let rightSymbol = isRed ? '↺' : '↻';
+
+                let leftBtnX = cx - btnOffset + leftShift;
+                let rightBtnX = cx + btnOffset + rightShift;
+                let btnY = cy;
+
+                if (r === 0) btnY = cy + cellSize * 0.35;
+                if (r === SIZE - 1) btnY = cy - cellSize * 0.35;
 
                 ctx.save();
                 // 왼쪽 버튼
@@ -944,7 +974,7 @@
                 ctx.strokeStyle = themeColor;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(cx - btnOffset, cy, btnRadius, 0, Math.PI * 2);
+                ctx.arc(leftBtnX, btnY, btnRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
@@ -952,19 +982,19 @@
                 ctx.font = `${cellSize * 0.22}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(leftSymbol, cx - btnOffset, cy);
+                ctx.fillText(leftSymbol, leftBtnX, btnY);
 
                 // 오른쪽 버튼
                 ctx.fillStyle = 'rgba(30, 30, 30, 0.9)';
                 ctx.strokeStyle = themeColor;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(cx + btnOffset, cy, btnRadius, 0, Math.PI * 2);
+                ctx.arc(rightBtnX, btnY, btnRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
                 ctx.fillStyle = '#fff';
-                ctx.fillText(rightSymbol, cx + btnOffset, cy);
+                ctx.fillText(rightSymbol, rightBtnX, btnY);
                 ctx.restore();
             }
         }
