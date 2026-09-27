@@ -129,17 +129,28 @@
         </div>
     </div>
 
-    <!-- 초기 설정 모달 -->
+    <!-- 초기 모달 (메인 메뉴) -->
     <div id="intro-modal" class="modal-overlay">
-        <div class="modal-content">
+        <!-- 모드 선택 -->
+        <div class="modal-content" id="mode-select-content">
             <h1 class="text-3xl font-bold text-green-400 mb-4 sf-font">LASER CHESS</h1>
             <p class="text-gray-300 mb-6">빛의 입사각과 반사각 원리를 이용해 상대의 왕을 제거하세요!</p>
             <div class="flex flex-col gap-3">
-                <button class="bg-gray-200 hover:bg-white text-black py-3 rounded font-bold" onclick="startGame('PVP')">2인 플레이 (1:1)</button>
-                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="startGame('AI_EASY')">혼자 하기 (하)</button>
-                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="startGame('AI_MID')">혼자 하기 (중)</button>
-                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="startGame('AI_HARD')">혼자 하기 (상)</button>
+                <button class="bg-gray-200 hover:bg-white text-black py-3 rounded font-bold" onclick="startGame('PVP', 0)">2인 플레이 (1:1)</button>
+                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="showColorSelect('AI_EASY')">AI 상대 (난이도: 하)</button>
+                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="showColorSelect('AI_MID')">AI 상대 (난이도: 중)</button>
+                <button class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded font-bold" onclick="showColorSelect('AI_HARD')">AI 상대 (난이도: 상)</button>
                 <button class="bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded font-bold mt-2" onclick="showRulesModal()">게임 규칙 알아보기</button>
+            </div>
+        </div>
+        
+        <!-- 진영 선택 (혼자 하기 클릭 시 노출) -->
+        <div class="modal-content hidden" id="color-select-content">
+            <h2 class="text-2xl font-bold text-white mb-6">플레이할 진영을 선택하세요</h2>
+            <div class="flex flex-col gap-4">
+                <button class="bg-gray-200 hover:bg-white text-black py-4 rounded font-bold text-lg" onclick="confirmColor(0)">화이트 (선공, 아래쪽)</button>
+                <button class="bg-gray-800 hover:bg-gray-700 border border-gray-500 text-white py-4 rounded font-bold text-lg" onclick="confirmColor(1)">블랙 (후공, 위쪽)</button>
+                <button class="bg-red-600 hover:bg-red-500 text-white py-2 rounded font-bold mt-4" onclick="hideColorSelect()">뒤로 가기</button>
             </div>
         </div>
     </div>
@@ -160,14 +171,12 @@
                     </div>
                     <div><b>왕:</b> 공격 능력이 없으며, 레이저를 맞으면 제거되어 패배합니다.</div>
                 </div>
-
                 <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><rect x="10" y="10" width="80" height="80" fill="none" stroke="#ffffff" stroke-width="8"/><polygon points="50,20 80,70 20,70" fill="#00ff00"/></svg>
                     </div>
                     <div><b>레이저:</b> 이동이 불가능하며 턴이 종료되면 자동으로 레이저를 발사합니다.</div>
                 </div>
-
                 <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8">
@@ -176,21 +185,19 @@
                             <line x1="15" y1="85" x2="85" y2="15" stroke="white" stroke-width="12" stroke-dasharray="15, 10"/>
                         </svg>
                     </div>
-                    <div><b>스플리터:</b> 레이저를 투과 및 반사시켜 공격합니다.</div>
+                    <div><b>스플리터:</b> 레이저를 투과 및 반사시켜 레이저를 두개로 분리합니다.</div>
                 </div>
-
                 <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><polygon points="10,90 90,90 10,10" fill="#ffffff"/><line x1="10" y1="10" x2="90" y2="90" stroke="#aaddff" stroke-width="12"/></svg>
                     </div>
-                    <div><b>세모기사:</b> 평면거울을 사용해 레이저를 45˚의 반사각으로 반사합니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
+                    <div><b>세모기사:</b> 평면거울로 레이저를 반사시킵니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
                 </div>
-
                 <div class="flex items-start gap-3 bg-gray-900/60 p-2 rounded">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-800 rounded">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8"><rect x="10" y="10" width="80" height="80" fill="#ffffff"/><line x1="10" y1="10" x2="90" y2="10" stroke="#aaddff" stroke-width="16"/></svg>
                     </div>
-                    <div><b>네모기사:</b> 평면거울을 사용해 레이저를 0˚의 반사각으로 반사합니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
+                    <div><b>네모기사:</b> 평면거울로 레이저를 반사시킵니다. 거울 이외에 면에 맞으면 제거됩니다.</div>
                 </div>
             </div>
 
@@ -239,7 +246,7 @@
         let currentTurn = P1;
         let gameMode = 'PVP';
         let gameState = 'MENU'; 
-        let uiState = 'NONE'; // NONE, ACTION_MENU, MOVE, ROTATE
+        let uiState = 'NONE'; 
         let timeLeft = 60;
         let timerInterval = null;
 
@@ -251,6 +258,11 @@
         let maxAnimTime = 0;
         let animStartTime = 0;
         let particles = [];
+
+        // 유저/AI 색상 설정 변수
+        let pendingMode = '';
+        let playerColor = P1;
+        let aiColor = null;
 
         const COLORS = {
             P1: '#ffffff', 
@@ -389,12 +401,39 @@
         }
         window.addEventListener('resize', resize);
 
-        function startGame(mode) {
+        // 메뉴 UI 네비게이션 함수들
+        function showColorSelect(mode) {
+            initAudio();
+            pendingMode = mode;
+            document.getElementById('mode-select-content').classList.add('hidden');
+            document.getElementById('color-select-content').classList.remove('hidden');
+        }
+
+        function hideColorSelect() {
+            document.getElementById('mode-select-content').classList.remove('hidden');
+            document.getElementById('color-select-content').classList.add('hidden');
+        }
+
+        function confirmColor(pColor) {
+            hideColorSelect();
+            startGame(pendingMode, pColor);
+        }
+
+        function startGame(mode, pColor) {
             initAudio(); 
             gameMode = mode;
+            
+            if (gameMode === 'PVP') {
+                playerColor = P1;
+                aiColor = null;
+            } else {
+                playerColor = pColor;
+                aiColor = (pColor === P1) ? P2 : P1;
+            }
+
             document.getElementById('intro-modal').classList.add('hidden');
             initBoard();
-            currentTurn = P1;
+            currentTurn = P1; // 화이트 무조건 선공
             gameState = 'PLAYING';
             uiState = 'NONE';
             resize(); 
@@ -429,7 +468,10 @@
                 laserBeams = [];
                 closeResetModal();
                 
+                // 모달을 다시 초기 상태로 복구
                 document.getElementById('intro-modal').classList.remove('hidden');
+                document.getElementById('mode-select-content').classList.remove('hidden');
+                document.getElementById('color-select-content').classList.add('hidden');
                 document.getElementById('timer-display').innerText = "60";
                 
                 initBoard();
@@ -444,7 +486,8 @@
             timeLeft = 60;
             updateTimerUI();
             
-            if (currentTurn === P2 && gameMode.startsWith('AI_')) {
+            // 만약 현재 턴이 AI의 턴이면 플레이어 조작 없이 타이머와 함께 AI가 동작하도록 호출
+            if (gameMode !== 'PVP' && currentTurn === aiColor) {
                 setTimeout(doAITurn, 1000);
             } else {
                 timerInterval = setInterval(() => {
@@ -487,10 +530,8 @@
 
         function doRotate(dir) {
             if (!selectedPiece || gameState !== 'PLAYING') return;
-            
             let p = board[selectedPiece.r][selectedPiece.c];
             if (!p) return;
-
             p.rot = (p.rot + dir + 4) % 4; 
             playSound('move');
             endTurnAction();
@@ -512,7 +553,8 @@
 
         canvas.addEventListener('pointerdown', (e) => {
             if (gameState !== 'PLAYING') return;
-            if (currentTurn === P2 && gameMode.startsWith('AI_')) return;
+            // AI의 턴일 경우 유저 클릭 방지
+            if (gameMode !== 'PVP' && currentTurn === aiColor) return;
 
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -542,6 +584,7 @@
             }
 
             let p = board[r][c];
+            // 자신의 말만 클릭할 수 있음
             if (p && p.owner === currentTurn) {
                 selectedPiece = { r, c };
                 uiState = 'ACTION_MENU';
@@ -577,12 +620,163 @@
             fireLaser(currentTurn);
         }
 
+        // --- 범용 AI 시뮬레이션 기능 ---
+        function cloneBoard(original) {
+            return original.map(row => row.map(cell => cell ? { ...cell } : null));
+        }
+
+        function simulateLaserRun(testBoard, testOwner) {
+            let queue = [];
+            let lr = -1, lc = -1, lrot = -1;
+            for(let r=0; r<SIZE; r++) {
+                for(let c=0; c<SIZE; c++) {
+                    let p = testBoard[r][c];
+                    if(p && p.type === TYPES.LASER && p.owner === testOwner) {
+                        lr = r; lc = c; lrot = p.rot;
+                        break;
+                    }
+                }
+                if (lr !== -1) break; 
+            }
+            if(lr === -1) return { deadPieces: [] };
+
+            queue.push({ r: lr, c: lc, dir: lrot, path: [{r: lr, c: lc}] });
+            let deadPieces = [];
+            let maxBounces = 30;
+            const dy = [-1, 0, 1, 0];
+            const dx = [0, 1, 0, -1];
+
+            while(queue.length > 0 && maxBounces > 0) {
+                let b = queue.shift();
+                maxBounces--;
+                let curR = b.r, curC = b.c, dir = b.dir;
+                let path = b.path;
+
+                while(true) {
+                    curR += dy[dir];
+                    curC += dx[dir];
+                    if(curR < 0 || curR >= SIZE || curC < 0 || curC >= SIZE) break;
+                    
+                    path.push({r: curR, c: curC});
+                    let p = testBoard[curR][curC];
+
+                    if (p) {
+                        let result = getHitResult(p, dir);
+                        if (result === 'DESTROY') {
+                            if (!deadPieces.some(d => d.r === curR && d.c === curC)) {
+                                deadPieces.push({ r: curR, c: curC, piece: p });
+                            }
+                            break;
+                        } else if (result === 'BLOCK') {
+                            break;
+                        } else if (result === 'TRANSMIT_AND_REFLECT') {
+                            let refDir = getReflectDir(p.rot, dir, true);
+                            if (refDir !== -1) {
+                                queue.push({ r: curR, c: curC, dir: refDir, path: [{r: curR, c: curC}] });
+                            }
+                        } else {
+                            dir = result; 
+                        }
+                    }
+                }
+            }
+            return { deadPieces };
+        }
+
+        function evaluateMove(move, evalColor) {
+            let testBoard = cloneBoard(board);
+            if (move.type === 'rot') {
+                testBoard[move.r][move.c].rot = move.nrot;
+            } else {
+                testBoard[move.nr][move.nc] = testBoard[move.r][move.c];
+                testBoard[move.r][move.c] = null;
+            }
+
+            let sim = simulateLaserRun(testBoard, evalColor);
+            let score = 0;
+
+            sim.deadPieces.forEach(d => {
+                // 부서진 기물의 주인이 상대방이면 점수 획득, 나 자신이면 감점
+                if (d.piece.owner !== evalColor) {
+                    if (d.piece.type === TYPES.KING) score += 100000;
+                    else if (d.piece.type === TYPES.SPLITTER) score += 500;
+                    else score += 300;
+                } else {
+                    if (d.piece.type === TYPES.KING) score -= 100000;
+                    else score -= 300;
+                }
+            });
+
+            if (move.type === 'mov') {
+                let centerDist = Math.abs(move.nr - 3.5) + Math.abs(move.nc - 3.5);
+                score += (7 - centerDist) * 5;
+            }
+
+            return score;
+        }
+
+        function doAITurn() {
+            if(gameState !== 'PLAYING') return;
+            
+            let moves = [];
+            for(let r=0; r<SIZE; r++) {
+                for(let c=0; c<SIZE; c++) {
+                    let p = board[r][c];
+                    // aiColor가 소유한 기물들만 이동/회전 후보에 추가
+                    if (p && p.owner === aiColor) {
+                        if (canRotate(r, c, p.type, 1)) moves.push({type:'rot', r, c, nrot: (p.rot+1)%4});
+                        if (canRotate(r, c, p.type, -1)) moves.push({type:'rot', r, c, nrot: (p.rot+3)%4});
+                        
+                        if (p.type !== TYPES.LASER) {
+                            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+                            for(let d of dirs) {
+                                let nr = r+d[0], nc = c+d[1];
+                                if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && !board[nr][nc]) {
+                                    moves.push({type:'mov', r, c, nr, nc});
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(moves.length === 0) {
+                endTurnAction(); return;
+            }
+
+            let chosenMove = null;
+
+            if (gameMode === 'AI_EASY') {
+                chosenMove = moves[Math.floor(Math.random() * moves.length)];
+            } else if (gameMode === 'AI_MID') {
+                let scored = moves.map(m => ({ m, score: evaluateMove(m, aiColor) }));
+                scored.sort((a, b) => b.score - a.score);
+                let topMoves = scored.filter(s => s.score >= scored[0].score - 100);
+                chosenMove = topMoves[Math.floor(Math.random() * topMoves.length)].m;
+            } else if (gameMode === 'AI_HARD') {
+                let scored = moves.map(m => ({ m, score: evaluateMove(m, aiColor) }));
+                scored.sort((a, b) => b.score - a.score);
+                chosenMove = scored[0].m;
+            }
+            
+            if (chosenMove.type === 'rot') {
+                board[chosenMove.r][chosenMove.c].rot = chosenMove.nrot;
+            } else {
+                board[chosenMove.nr][chosenMove.nc] = board[chosenMove.r][chosenMove.c];
+                board[chosenMove.r][chosenMove.c] = null;
+            }
+            
+            playSound('move');
+            endTurnAction();
+        }
+
+        // --- 레이저 발사 및 게임 엔진 ---
         function fireLaser(owner) {
             playSound('laser'); 
             laserBeams = [];
             let queue = [];
-            
             let lr = -1, lc = -1, lrot = -1;
+            
             for(let r=0; r<SIZE; r++) {
                 for(let c=0; c<SIZE; c++) {
                     let p = board[r][c];
@@ -593,20 +787,18 @@
                 }
                 if (lr !== -1) break; 
             }
+            
             if(lr === -1) return;
 
             queue.push({ r: lr, c: lc, dir: lrot, path: [{r: lr, c: lc}], startDist: 0 });
-            
             let deadPieces = [];
             let maxBounces = 30;
-
             const dy = [-1, 0, 1, 0];
             const dx = [0, 1, 0, -1];
 
             while(queue.length > 0 && maxBounces > 0) {
                 let b = queue.shift();
                 maxBounces--;
-                
                 let curR = b.r, curC = b.c, dir = b.dir;
                 let path = b.path;
                 let startDist = b.startDist;
@@ -625,30 +817,21 @@
 
                     if (p) {
                         let result = getHitResult(p, dir);
-                        
                         if (result === 'DESTROY') {
                             if (!deadPieces.some(d => d.r === curR && d.c === curC)) {
                                 deadPieces.push({ r: curR, c: curC, piece: p });
                             }
                             laserBeams.push({ path: [...path], hit: {r: curR, c: curC}, startDist });
                             break;
-                        } 
-                        else if (result === 'BLOCK') {
+                        } else if (result === 'BLOCK') {
                             laserBeams.push({ path: [...path], hit: null, startDist });
                             break;
-                        }
-                        else if (result === 'TRANSMIT_AND_REFLECT') {
+                        } else if (result === 'TRANSMIT_AND_REFLECT') {
                             let refDir = getReflectDir(p.rot, dir, true);
                             if (refDir !== -1) {
-                                queue.push({ 
-                                    r: curR, c: curC, 
-                                    dir: refDir, 
-                                    path: [{r: curR, c: curC}], 
-                                    startDist: startDist + path.length - 1 
-                                });
+                                queue.push({ r: curR, c: curC, dir: refDir, path: [{r: curR, c: curC}], startDist: startDist + path.length - 1 });
                             }
-                        }
-                        else {
+                        } else {
                             dir = result; 
                         }
                     }
@@ -657,7 +840,6 @@
 
             animStartTime = performance.now();
             maxAnimTime = 2500; 
-            
             requestAnimationFrame((t) => animateLaser(t, deadPieces));
         }
 
@@ -696,10 +878,8 @@
 
         function animateLaser(timestamp, deadPieces) {
             if (gameState === 'MENU') return;
-
             let progress = (timestamp - animStartTime) / maxAnimTime;
             if (progress > 1.0) progress = 1.0;
-            
             drawAll(); 
 
             ctx.save();
@@ -737,7 +917,6 @@
                 ctx.beginPath();
                 for (let i = 0; i < path.length - 1; i++) {
                     if (drawSegs <= i) break;
-                    
                     let p1 = path[i];
                     let p2 = path[i+1];
                     let x1 = p1.c * cellSize + cellSize/2;
@@ -760,14 +939,11 @@
             ctx.restore();
 
             if (progress >= 1.0 || allFinished) {
-                if (deadPieces.length > 0) {
-                    playSound('destroy');
-                }
+                if (deadPieces.length > 0) playSound('destroy');
 
                 deadPieces.forEach(d => {
                     spawnParticles(d.c * cellSize + cellSize/2, d.r * cellSize + cellSize/2, d.piece.owner === P1 ? COLORS.P1 : COLORS.P2);
                     board[d.r][d.c] = null;
-                    
                     if (d.piece.type === TYPES.KING) {
                         setTimeout(() => showWinModal(d.piece.owner === P1 ? P2 : P1), 1000);
                         gameState = 'GAMEOVER';
@@ -802,7 +978,6 @@
 
         function animateParticlesLoop() {
             if (gameState === 'MENU') return;
-
             if (particles.length === 0 && gameState === 'PLAYING') {
                 drawAll();
                 return;
@@ -815,7 +990,6 @@
                     p.x += p.vx;
                     p.y += p.vy;
                     p.life -= 0.05;
-                    
                     if (p.life <= 0) {
                         particles.splice(i, 1);
                     } else {
@@ -843,47 +1017,6 @@
                 t.className = "text-4xl font-bold mb-2 sf-font text-gray-400";
                 desc.innerText = "화이트의 왕이 파괴되었습니다!";
             }
-        }
-
-        function doAITurn() {
-            if(gameState !== 'PLAYING') return;
-            
-            let moves = [];
-            for(let r=0; r<SIZE; r++) {
-                for(let c=0; c<SIZE; c++) {
-                    let p = board[r][c];
-                    if (p && p.owner === P2) {
-                        if (canRotate(r, c, p.type, 1)) moves.push({type:'rot', r, c, nrot: (p.rot+1)%4});
-                        if (canRotate(r, c, p.type, -1)) moves.push({type:'rot', r, c, nrot: (p.rot+3)%4});
-                        
-                        if (p.type !== TYPES.LASER) {
-                            const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-                            for(let d of dirs) {
-                                let nr = r+d[0], nc = c+d[1];
-                                if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && !board[nr][nc]) {
-                                    moves.push({type:'mov', r, c, nr, nc});
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if(moves.length === 0) {
-                endTurnAction(); return;
-            }
-
-            let act = moves[Math.floor(Math.random() * moves.length)];
-            
-            if (act.type === 'rot') {
-                board[act.r][act.c].rot = act.nrot;
-            } else {
-                board[act.nr][act.nc] = board[act.r][act.c];
-                board[act.r][act.c] = null;
-            }
-            
-            playSound('move');
-            endTurnAction();
         }
 
         function roundRect(ctx, x, y, w, h, r) {
@@ -1000,7 +1133,6 @@
         function getUIPosition(r, c, owner) {
             let cx = c * cellSize + cellSize / 2;
             let cy = r * cellSize + cellSize / 2;
-            
             let offsetY = -cellSize * 0.9; 
             if (owner === P2) offsetY = cellSize * 0.9; 
             
@@ -1045,7 +1177,6 @@
                         ctx.save();
                         ctx.translate(x + cellSize/2, y + cellSize/2);
                         ctx.rotate(p.rot * Math.PI / 2);
-                        
                         let imgSize = cellSize * 0.8;
                         ctx.drawImage(pieceImages[p.owner][p.type], -imgSize/2, -imgSize/2, imgSize, imgSize);
                         ctx.restore();
@@ -1056,7 +1187,7 @@
             if (selectedPiece && gameState === 'PLAYING') {
                 let p = board[selectedPiece.r][selectedPiece.c];
                 let isBlack = (p.owner === P2);
-                let themeColor = isBlack ? COLORS.P2 : COLORS.P1;
+                let themeColor = isBlack ? COLORS.P1 : COLORS.P1; // 둘 다 화이트(P1) 색상으로 강제 고정
                 let cx = selectedPiece.c * cellSize + cellSize / 2;
                 let cy = selectedPiece.r * cellSize + cellSize / 2;
 
@@ -1087,7 +1218,6 @@
                 resize(); 
             });
         };
-
     </script>
 </body>
 </html>
